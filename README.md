@@ -13,7 +13,7 @@ Locus is an open-source human–AI creativity experiment. It guides someone thro
 
 ## Why I built this
 
-I graduated from the University of Pennsylvania with a degree in cognitive science. A friend working in Adam Green's lab introduced me to his research, and I became fascinated by a question that already felt personally important: when I use AI constantly, is it extending my creativity, redirecting it, or quietly narrowing it?
+I graduated from the University of Pennsylvania in May 2026 with a degree in Cognitive Science and a concentration in Computational Science. A friend working in Adam Green's lab introduced me to his research, and I became fascinated by a question that already felt personally important: when I use AI constantly, is it extending my creativity, redirecting it, or quietly narrowing it?
 
 I built Locus as a way to understand those ideas more concretely. Rather than assigning a single opaque “creativity score,” the project tries to reconstruct what happened during one interaction: which ideas began with the human, what the model introduced, where the human challenged or reframed the model, and what emerged only through collaboration.
 
