@@ -21,7 +21,7 @@ Locus is an independent exploratory project. It is not affiliated with or endors
 
 ## The participant experience
 
-The guided protocol moves through five stages:
+Internally, the guided protocol moves through five analytically tagged stages:
 
 1. **Baseline ideation** — the participant develops initial directions before the model contributes concepts.
 2. **Creative cue** — the participant is explicitly asked to make a less obvious connection.
@@ -29,7 +29,18 @@ The guided protocol moves through five stages:
 4. **Independent thinking** — the model stops supplying ideas and the participant takes the concept somewhere new.
 5. **Reflection** — the participant identifies what surprised them and when the direction felt like their own.
 
-There is no countdown. A participant can think at their own pace and finish once they have provided at least one response.
+Those labels are deliberately hidden while the participant is talking. The session interface does not show a phase name, timer, stage counter, or phase tags on messages, and the guide is instructed never to announce when a condition changes. It transitions through playful questions, unusual analogies, challenges, reversals, and synthesis prompts as one natural conversation. This reduces an obvious source of demand effects while preserving the hidden metadata needed for post-session comparison; it does not eliminate demand characteristics altogether.
+
+There is no countdown. A participant can think at their own pace and finish once they have provided at least one response. A complete guided run collects the final reflection before beginning analysis.
+
+### What the participant gets back
+
+The personal report is designed to answer two practical questions:
+
+1. **What did AI appear to do in this session?** Locus returns one standardized, preliminary verdict: evidence of a boost, a mixed effect, no clear change, evidence of constraint, or not enough evidence. It also shows three transcript-linked signals behind that reading and caps confidence because one short, fixed-order session cannot establish causality.
+2. **How should I use AI next time?** Locus generates a three-part creativity playbook tied to the participant's actual behavior. Every recommendation includes a concrete action, why it fits the transcript, a supporting moment, and a ready-to-copy prompt for another LLM conversation.
+
+The verdict describes the pattern observed inside one exchange. It does not establish whether AI generally makes that person more or less creative. That stronger claim would require repeated, randomized, counterbalanced comparisons against matched no-AI and active-control conditions.
 
 ## What the analysis measures
 
@@ -43,6 +54,7 @@ Every completed session is analyzed from its actual transcript. The report does 
 - human and AI branch creation
 - human initiation
 - AI amplification
+- a preliminary evidence-of-boost / mixed / no-change / constraint verdict
 - challenge rate
 - synthesis and reframing
 - possible AI preemption
@@ -259,6 +271,7 @@ The brain and neural-network imagery on the landing page is conceptual. Locus co
 - The report avoids a composite creativity score and avoids claims about intelligence, personality, diagnosis, or stable ability.
 - Results identify the text-generation and embedding models used so model dependence is visible.
 - The personal report describes patterns in **this session**, while the research dashboard preserves the underlying evidence for inspection.
+- The participant-facing protocol labels are hidden during the conversation, and a short session cannot receive more than medium verdict confidence.
 
 These are transparency safeguards, not substitutes for validation.
 

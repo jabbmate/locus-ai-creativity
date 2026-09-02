@@ -55,6 +55,23 @@ export type PersonalTakeaway = {
   evidenceTurnIds: number[];
 };
 
+export type AiEffectVerdict = "boosted" | "mixed" | "no_clear_change" | "constrained" | "inconclusive";
+
+export type AiEffectSignal = {
+  title: string;
+  direction: "boost" | "drag" | "neutral";
+  explanation: string;
+  evidenceTurnIds: number[];
+};
+
+export type CoachingCard = {
+  title: string;
+  action: string;
+  whyThisFits: string;
+  tryPrompt: string;
+  evidenceTurnIds: number[];
+};
+
 export type PhaseTakeaway = {
   label: string;
   explanation: string;
@@ -64,14 +81,14 @@ export type PersonalReport = {
   headline: string;
   headlineEmphasis: string;
   summary: string;
-  aiEffectLabel: string;
-  aiEffectTone: "helpful" | "mixed" | "limited" | "harmful";
+  aiEffectVerdict: AiEffectVerdict;
+  aiEffectConfidence: Confidence;
   aiEffectHeadline: string;
   aiEffectExplanation: string;
+  aiEffectSignals: AiEffectSignal[];
   phaseTakeaways: PhaseTakeaway[];
   takeaways: PersonalTakeaway[];
-  nextSessionTitle: string;
-  nextSessionTips: string[];
+  coachingPlan: CoachingCard[];
   bottomLine: string;
   bottomLineCaveat: string;
 };

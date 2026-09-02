@@ -41,10 +41,16 @@ const analysisDraftSchema = z.object({
     headline: z.string().min(1).max(90),
     headlineEmphasis: z.string().min(1).max(45),
     summary: z.string().min(1).max(420),
-    aiEffectLabel: z.string().min(1).max(45),
-    aiEffectTone: z.enum(["helpful", "mixed", "limited", "harmful"]),
+    aiEffectVerdict: z.enum(["boosted", "mixed", "no_clear_change", "constrained", "inconclusive"]),
+    aiEffectConfidence: confidenceSchema,
     aiEffectHeadline: z.string().min(1).max(100),
     aiEffectExplanation: z.string().min(1).max(420),
+    aiEffectSignals: z.array(z.object({
+      title: z.string().min(1).max(75),
+      direction: z.enum(["boost", "drag", "neutral"]),
+      explanation: z.string().min(1).max(260),
+      evidenceTurnIds: z.array(z.number().int().positive()).min(1).max(5),
+    })).length(3),
     phaseTakeaways: z.array(z.object({
       label: z.string().min(1).max(40),
       explanation: z.string().min(1).max(240),
@@ -54,8 +60,13 @@ const analysisDraftSchema = z.object({
       explanation: z.string().min(1).max(300),
       evidenceTurnIds: z.array(z.number().int().positive()).min(1).max(5),
     })).length(3),
-    nextSessionTitle: z.string().min(1).max(100),
-    nextSessionTips: z.array(z.string().min(1).max(180)).length(3),
+    coachingPlan: z.array(z.object({
+      title: z.string().min(1).max(80),
+      action: z.string().min(1).max(260),
+      whyThisFits: z.string().min(1).max(260),
+      tryPrompt: z.string().min(1).max(320),
+      evidenceTurnIds: z.array(z.number().int().positive()).min(1).max(5),
+    })).length(3),
     bottomLine: z.string().min(1).max(360),
     bottomLineCaveat: z.string().min(1).max(240),
   }),
@@ -167,7 +178,11 @@ export async function POST(request: Request) {
           reasoningSummary: null,
         },
       },
-      system: `You are the evidence-constrained analysis engine for Locus, an exploratory human-AI creativity research prototype. Analyze only the supplied transcript. Never infer stable intelligence, personality, clinical state, neurological mechanism, or literal brain function. Do not praise the participant. Distinguish observed text, model judgment, and uncertainty. Every claim must cite valid transcript turn IDs in its evidenceTurnIds field; do not put turn numbers or citation markers inside personal-report prose. Extract atomic ideas at the smallest conceptually meaningful level; include substantive concepts introduced by both the participant and AI, but do not count a question as an idea unless it contributes a conceptual seed. Parent IDs must refer only to earlier atomic ideas. Mark a branch only when an idea opens a materially different direction. Use plain language in the personal report. The three phase takeaways must cover before AI input, working with AI, and after AI steps back. Evaluate whether AI helped, limited, mixed with, or harmed creative movement in this session, and explain the evidence without overclaiming. Operations must use only the allowed taxonomy. Possible AI preemption requires evidence that an AI suggestion may have displaced or narrowed an emerging human direction; use zero when evidence is absent. Co-creative emergence requires a result not reasonably attributable to either side alone.`,
+      system: `You are the evidence-constrained analysis engine for Locus, an exploratory human-AI creativity research prototype. Analyze only the supplied transcript. Never infer stable intelligence, personality, clinical state, neurological mechanism, or literal brain function. Do not praise the participant. Distinguish observed text, model judgment, and uncertainty. Every claim must cite valid transcript turn IDs in its evidenceTurnIds field; do not put turn numbers or citation markers inside personal-report prose. Extract atomic ideas at the smallest conceptually meaningful level; include substantive concepts introduced by both the participant and AI, but do not count a question as an idea unless it contributes a conceptual seed. Parent IDs must refer only to earlier atomic ideas. Mark a branch only when an idea opens a materially different direction. Operations must use only the allowed taxonomy. Possible AI preemption requires evidence that an AI suggestion may have displaced or narrowed an emerging human direction; use zero when evidence is absent. Co-creative emergence requires a result not reasonably attributable to either side alone.
+
+Write the personal report for an everyday participant, not a scientist. The headline and headlineEmphasis are rendered next to each other: write headline as the opening clause and headlineEmphasis as a short final phrase that completes it grammatically without repeating any words or ideas. Keep every prose field within its limit using complete sentences; never trail off, duplicate a phrase, or end on a fragment. Give a direct but cautious within-session verdict: boosted when there is converging evidence that AI opened or strengthened human creative movement; constrained when it narrowed, displaced, or stalled it; mixed when both happened; no_clear_change when the observed contrasts are small or contradictory; and inconclusive when the transcript lacks a usable before/during/after comparison. This verdict is a session-level interpretation, never a causal or stable-person claim. Set confidence according to the clarity and quantity of transcript evidence and do not use high confidence for a single short session.
+
+The three aiEffectSignals must make the verdict inspectable: identify concrete evidence for expansion, constraint, or no clear change and cite the relevant turns. The three phase takeaways must cover before AI input, working with AI, and after AI steps back, using natural labels rather than research jargon. The three coachingPlan items must be highly specific to this participant's behavior. Each must say exactly what to do with AI next time, why that advice fits this transcript, and include a ready-to-copy prompt. Avoid generic advice such as “think outside the box,” “be more creative,” or “ask follow-up questions.” Favor practical techniques such as generating independently before asking AI, requesting contrasting mechanisms rather than finished answers, forcing the AI to critique or invert a human idea, or making the human synthesize after AI input—but only when the transcript supports that recommendation. Use plain, concrete language throughout.`,
       prompt: `Analyze this complete Locus transcript. Re-scan it before finalizing so every substantive idea and evidence link is captured. Return only the schema-defined analysis.\n\n${transcript}`,
     });
 
@@ -314,10 +329,30 @@ export async function POST(request: Request) {
         evidenceLinkedPercent: Math.round((linkedTurns.size / messages.length) * 100),
         medianResponseMs,
       },
-      personalReport: {
-        ...draft.personalReport,
-        takeaways: draft.personalReport.takeaways.map(takeaway => ({ ...takeaway, evidenceTurnIds: validEvidence(takeaway.evidenceTurnIds, turnIds) })),
-      },
+      personalReport: (() => {
+        const phaseHasParticipantIdea = (phase: Phase) => atomicIdeas.some(idea => idea.source !== "ai" && idea.phase === phase);
+        const comparisonReady = aiIdeas.length > 0 && phaseHasParticipantIdea("Baseline") && phaseHasParticipantIdea("Co-creation") && phaseHasParticipantIdea("Independent");
+        const validSignals = draft.personalReport.aiEffectSignals.map(signal => ({ ...signal, evidenceTurnIds: validEvidence(signal.evidenceTurnIds, turnIds) }));
+        const validCoaching = draft.personalReport.coachingPlan.map(item => ({ ...item, evidenceTurnIds: validEvidence(item.evidenceTurnIds, turnIds) }));
+        const cappedConfidence: Confidence = draft.personalReport.aiEffectConfidence === "high" ? "medium" : draft.personalReport.aiEffectConfidence;
+        return {
+          ...draft.personalReport,
+          aiEffectVerdict: comparisonReady ? draft.personalReport.aiEffectVerdict : "inconclusive" as const,
+          aiEffectConfidence: comparisonReady ? cappedConfidence : "low" as const,
+          aiEffectHeadline: comparisonReady ? draft.personalReport.aiEffectHeadline : "There is not enough contrast yet.",
+          aiEffectExplanation: comparisonReady
+            ? draft.personalReport.aiEffectExplanation
+            : "This session ended before it contained enough human ideas before, during, and after AI input to support a useful comparison. Try a complete session for a preliminary read.",
+          aiEffectSignals: comparisonReady ? validSignals : [{
+            title: "Not enough comparison points",
+            direction: "neutral" as const,
+            explanation: "A useful session-level read needs human ideas from before AI contributes, while ideas are exchanged, and after the guide steps back.",
+            evidenceTurnIds: validEvidence(humanMessages.map(message => message.id), turnIds),
+          }],
+          takeaways: draft.personalReport.takeaways.map(takeaway => ({ ...takeaway, evidenceTurnIds: validEvidence(takeaway.evidenceTurnIds, turnIds) })),
+          coachingPlan: validCoaching,
+        };
+      })(),
       atomicIdeas,
       transcriptAnnotations: annotations,
       semanticTrajectory,
